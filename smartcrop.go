@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -10,12 +9,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/muesli/smartcrop"
 	"github.com/nfnt/resize"
 )
 
-// SubImager это черт его знает что за конструкция
+// SubImager - I don't understand this construction
 type SubImager interface {
 	SubImage(r image.Rectangle) image.Image
 }
@@ -41,7 +41,7 @@ func writeImageToPng(img *image.Image, name string) {
 }
 
 func main() {
-	// принимаем параметрами директорию с изображениями, префикс для новых изображений и новые размеры
+	// get params
 	pathPtr := flag.String("path", ".", "Path to directory with images. If param is not set then used current directory")
 	prefixPtr := flag.String("prefix", "thumb", "Prefix for thumbnail images")
 	widthPtr := flag.Int("width", 220, "width of thumbnail image")
@@ -49,9 +49,10 @@ func main() {
 
 	flag.Parse()
 
-	// открываем заданную директорию. Если директория не задана то открываем текущую директорию
+	// open directory with files
 	var dir string
 	var err error
+	// if path not set using current directory
 	if *pathPtr == "." {
 		dir = *pathPtr
 	} else {
@@ -68,20 +69,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// извлекаем список всех изображений
+	// get all files
 	for _, f := range files {
-		ext := filepath.Ext(f.Name())
+		ext := strings.ToLower(filepath.Ext(f.Name()))
 
-		if ext == ".jpg" {
-			// в цикле уменьшаем изображение и сохраняем с префиксом в текущую директорию
-
+		// proceed only images (jpg or png)
+		if ext == ".jpg" || ext == ".png" {
 			fi, _ := os.Open(filepath.Join(dir, f.Name()))
 			defer fi.Close()
 
+			// crop
 			img, _, _ := image.Decode(fi)
 			topCrop, _ := smartcrop.SmartCrop(&img, *widthPtr, *heightPtr)
-			fmt.Printf("Top crop: %+v\n", topCrop)
-			fmt.Println(f.Name())
+			//fmt.Printf("Top crop: %+v\n", topCrop)
+			//fmt.Println(f.Name())
 
 			sub, ok := img.(SubImager)
 			if ok {
@@ -89,7 +90,12 @@ func main() {
 				cropImage := sub.SubImage(image.Rect(topCrop.X, topCrop.Y, topCrop.Width+topCrop.X, topCrop.Height+topCrop.Y))
 				// resize
 				newImage := resize.Resize(uint(*widthPtr), uint(*heightPtr), cropImage, resize.Lanczos3)
-				writeImageToJpeg(&newImage, newName)
+				if ext == ".jpg" {
+					writeImageToJpeg(&newImage, newName)
+				}
+				if ext == ".png" {
+					writeImageToPng(&newImage, newName)
+				}
 
 			} else {
 				log.Fatal("No SubImage support")
