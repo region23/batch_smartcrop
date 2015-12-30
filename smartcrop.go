@@ -13,6 +13,7 @@ import (
 
 	"github.com/muesli/smartcrop"
 	"github.com/nfnt/resize"
+
 )
 
 // SubImager - I don't understand this construction
@@ -64,6 +65,7 @@ func main() {
 	}
 
 	files, err := ioutil.ReadDir(dir)
+    
 
 	if err != nil {
 		log.Fatal(err)
@@ -79,8 +81,15 @@ func main() {
 			defer fi.Close()
 
 			// crop
-			img, _, _ := image.Decode(fi)
-			topCrop, _ := smartcrop.SmartCrop(&img, *widthPtr, *heightPtr)
+			img, _, err := image.Decode(fi)
+            if err != nil {
+		      log.Fatal(err)
+	        }
+    
+			topCrop, err := smartcrop.SmartCrop(img, *widthPtr, *heightPtr)
+            if err != nil {
+		      log.Fatal(err)
+	        }
 			//fmt.Printf("Top crop: %+v\n", topCrop)
 			//fmt.Println(f.Name())
 
